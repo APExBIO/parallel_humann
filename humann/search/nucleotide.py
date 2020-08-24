@@ -90,7 +90,9 @@ def index(custom_database):
     opts=config.bowtie2_build_opts
 
     args=["-f",custom_database,index_name]
-
+    # multi threads for bowtie
+    args += ["--threads", config.threads]
+    
     outfiles=[index_name + ext for ext in config.bowtie2_index_ext_list] 
 
     # if custom_database is large (>4G) then use the --large-index flag
