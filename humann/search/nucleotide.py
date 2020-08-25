@@ -307,9 +307,9 @@ def sam_line_process_2(line):
                 if not unaligned_read:
                     alignments.add_annotated(query, matches, info[config.sam_reference_index],
                                              alignment_length)
-                else:
-                    small_identity_count = 1
-                    unaligned_read = True
+            else:
+                small_identity_count = 1
+                unaligned_read = True
 
         if unaligned_read:
             annotated_sam_read_name = utilities.add_length_annotation(info[config.sam_read_name_index],
@@ -344,12 +344,10 @@ def unaligned_reads(sam_alignment_file, alignments, unaligned_reads_store, keep_
     Return file and data structure of the unaligned reads 
     Store the alignments and return
     """
-
     # for translated search create fasta unaligned reads file
     # even if original reads file is fastq
     unaligned_reads_file_fasta = utilities.name_temp_file(
         config.nucleotide_unaligned_reads_name_no_ext + config.fasta_extension)
-
     # if set to run frame picker, create named temp file
     write_picked_frames = False
     if config.pick_frames_toggle == "on":
@@ -370,7 +368,6 @@ def unaligned_reads(sam_alignment_file, alignments, unaligned_reads_store, keep_
     from multiprocessing import Pool
     start = time.time()
     chunk_size = 1000000 * config.threads
-
     with open(sam_alignment_file, "rt") as file_handle_read, \
             open(reduced_aligned_reads_file, "w") as file_handle_write_aligned, \
             Pool(config.threads) as pool:
