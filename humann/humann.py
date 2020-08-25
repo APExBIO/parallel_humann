@@ -65,7 +65,7 @@ from .quantify import modules
 # name global logging instance
 logger=logging.getLogger(__name__)
 
-VERSION="3.0.0.alpha.4"
+VERSION="3.0.0.alpha.4-edited-by-sjyu"
 MAX_SIZE_DEMO_INPUT_FILE=10
 
 def parse_arguments(args):
@@ -967,13 +967,19 @@ def main():
                 nucleotide_index_file = nucleotide.index(custom_database)
                 start_time=timestamp_message("database index",start_time)
             else:
-                nucleotide_index_file = nucleotide.find_index(config.nucleotide_database)
+                pass
+                # nucleotide_index_file = nucleotide.find_index(config.nucleotide_database)
                 
-            nucleotide_alignment_file = nucleotide.alignment(args.input, 
-                nucleotide_index_file)
+            # nucleotide_alignment_file = nucleotide.alignment(args.input,
+            #     nucleotide_index_file)
+            nucleotide_alignment_file = "/home/yusj/workspace/S11/S11_kneaddata_humann_temp" \
+                                        "/S11_kneaddata_bowtie2_aligned.sam"
+            nucleotide_alignment_file = "/home/data/yusj/C1_kneaddata_bowtie2_aligned.sam"
     
             start_time=timestamp_message("nucleotide alignment",start_time)
-    
+
+            # TODO speed up 2
+            print("processing sam file.....")
             # Determine which reads are unaligned and reduce aligned reads file
             # Remove the alignment_file as we only need the reduced aligned reads file
             [ unaligned_reads_file_fasta, reduced_aligned_reads_file ] = nucleotide.unaligned_reads(
