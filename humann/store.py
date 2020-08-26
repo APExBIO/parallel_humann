@@ -1238,6 +1238,13 @@ class Reads:
     """
     Holds all of the reads data to create a fasta file
     """
+
+    def update_ids(self, ids):
+        """
+        批量更新,ids为set
+        Shaojun Yu
+        """
+        self.__ids.update(ids)
     
     def add(self, id, sequence):
         """
