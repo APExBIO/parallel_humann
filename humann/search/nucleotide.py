@@ -411,16 +411,15 @@ def unaligned_reads_yu(sam_alignment_file, alignments, unaligned_reads_store, ke
         lines = file_handle_read.readlines(chunk_size)
         while len(lines) > 0:
             lines = file_handle_read.readlines(chunk_size)
+            # map
             results = pool.map(sam_line_process_2, lines)
+            
+            # reduce
             file_handle_write_unaligned.writelines(filter(None, [r['fasta'] for r in results]))
             query_ids.update(set([r['query_id'] for r in results]))
-            # unaligned_reads_store.update_ids(set(filter(None, [r['sam_read_name_index'] for r in results])))
-            for r in filter(None, [r['sam_read_name_index'] for r in results]):
-                unaligned_reads_store.add(r, "")
-            # alignments.add_annotated()
-            # for r in filter(None, [r['add_annotated'] for r in results]):
-            #     alignments.add_annotated(*r)
-
+            unaligned_reads_store.update_ids(set(filter(None, [r['sam_read_name_index'] for r in results])))
+            for r in filter(None, [r['add_annotated'] for r in results]):
+                alignments.add_annotated(*r)
             no_frames_found_count += sum([r['no_frames_found_count'] for r in results])
             small_identity_count += sum([r['small_identity_count'] for r in results])
             filtered_genes_count += sum([r['filtered_genes_count'] for r in results])
