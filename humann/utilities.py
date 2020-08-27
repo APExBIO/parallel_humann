@@ -733,8 +733,52 @@ def execute_command(exe, args, infiles, outfiles, stdout_file=None,
                 # run command, raise CalledProcessError if return code is non-zero
                 p = subprocess.check_call(cmd, stdin=stdin, stdout=stdout, stderr=stderr)
             else:
-                p_out = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-                logger.debug(p_out)
+                # 测试diamond推荐参数
+                b_para_re = re.compile(r"recommended.*(-b\d)")
+                c_para_re = re.compile(r"recommended.*(-c\d)")
+                # line = "The host system is detected to have 67 GB of RAM. It is recommended to increase the block
+                # size for better performance using these parameters: -b6"
+                if "diamond" in cmd[0]:
+                    message = "YSJ: Test run of diamond, search for best parameters.............."
+                    logger.debug(message)
+                    print(message)
+                    if len(list(filter(b_para_re.match, cmd))) == 0 \
+                            or len(list(filter(c_para_re.match, cmd))) == 0:
+                        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                        while True:
+                            line = p.stdout.readline().decode("utf-8")
+                            if not line:
+                                break
+                            print(line.rstrip())
+                            logger.debug(line.rstrip())
+                            b_para = b_para_re.search(line)
+                            c_para = c_para_re.search(line)
+                            matched = False
+                            if b_para:
+                                b_para = b_para.group(1)
+                                cmd += [b_para]
+                                matched = True
+                            if c_para:
+                                c_para = c_para.group(1)
+                                cmd += [c_para]
+                                matched = True
+                            if matched:
+                                message = "YSJ: Found recommended parameters: {},{}, kill subprocess".format(b_para, c_para)
+                                print(message)
+                                logger.debug(message)
+                                # exit subprocess
+                                p.kill()
+
+                # 使用popen 调用，实时输出
+                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                while True:
+                    line = p.stdout.readline().decode("utf-8")
+                    if not line:
+                        break
+                    print(line.rstrip("\n"))
+                    logger.debug(line.rstrip("\n"))
+                # p_out = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+                # logger.debug(p_out)
         except (EnvironmentError, subprocess.CalledProcessError) as e:
             message="Error executing: " + " ".join(cmd) + "\n"
             if hasattr(e, 'output') and e.output:
