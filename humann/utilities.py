@@ -54,11 +54,12 @@ import datetime
 import time
 import math
 
-from . import config
+from . import config, store
 from .search import pick_frames
 
 # name global logging instance
-logger=logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+
 
 def determine_file_format(file):
     """
@@ -94,25 +95,25 @@ def determine_file_format(file):
     # check file exists
     file_exists_readable(file)
 
-    format=""
+    format = ""
 
     # read in the first 2 lines of the file to check format  
-    gzipped=False
+    gzipped = False
     try:
         # check for gzipped files
         if file.endswith(".gz"):
             file_handle = gzip.open(file, "rt")
-            gzipped=True
+            gzipped = True
         else:
             file_handle = open(file, "rt")
 
         first_line = file_handle.readline().rstrip()
-        while re.search("^#",first_line):
+        while re.search("^#", first_line):
             first_line = file_handle.readline().rstrip()
         second_line = file_handle.readline().rstrip()
     except (EnvironmentError, UnicodeDecodeError):
         # if unable to open and read the file, set the format to unknown
-        format="unknown"
+        format = "unknown"
         first_line = ""
         second_line = ""
     finally:
@@ -120,60 +121,61 @@ def determine_file_format(file):
 
     # check for a bam file
     if file.endswith(".bam"):
-        format="bam"
+        format = "bam"
     elif file.endswith(".biom"):
-        format="biom"
+        format = "biom"
     # check that second line is only nucleotides or amino acids
     elif re.search("^[A-Z|a-z]+$", second_line):
         # check first line to determine fasta or fastq format
-        if re.search("^@",first_line):
-            format="fastq"
-        if re.search("^>",first_line):
-            format="fasta"
+        if re.search("^@", first_line):
+            format = "fastq"
+        if re.search("^>", first_line):
+            format = "fasta"
     else:
         # check for sam format with header on first line
         if re.search("^@[A-Za-z][A-Za-z](\t[A-Za-z][A-Za-z0-9]:[ -~]+)+$",
-            first_line) or re.search("^@CO\t.*",first_line):
-            format="sam"
+                     first_line) or re.search("^@CO\t.*", first_line):
+            format = "sam"
 
         # check for formats that have tabs in the first line
-        if re.search(("\t"),first_line) and not format:
-            data=first_line.split("\t")
-            if len(data)>config.sam_read_quality:
+        if re.search(("\t"), first_line) and not format:
+            data = first_line.split("\t")
+            if len(data) > config.sam_read_quality:
                 # check for sam format
-                if re.search("\*|[A-Za-z=.]+",data[config.sam_read_index]):
-                    format="sam"
+                if re.search("\*|[A-Za-z=.]+", data[config.sam_read_index]):
+                    format = "sam"
                 # check for standard blastm8 format (blast, usearch, rapsearch)
                 # this will have only numeric values in the column that for
                 # a sam file would be the read sequence
-                elif re.search("^[0-9]+$",data[config.sam_read_index]):
-                    format="blastm8"
+                elif re.search("^[0-9]+$", data[config.sam_read_index]):
+                    format = "blastm8"
                 else:
                     try:
                         # the location of the blastm8 evalue contains quality
                         # score information in the sam format
-                        evalue=float(data[config.blast_evalue_index])
-                        format="blastm8"
+                        evalue = float(data[config.blast_evalue_index])
+                        format = "blastm8"
                     except ValueError:
-                        if re.search("[!-~]+",data[config.blast_evalue_index]):
-                            format="sam"
+                        if re.search("[!-~]+", data[config.blast_evalue_index]):
+                            format = "sam"
             # check for gene table for a single sample
-            elif len(data)==config.gene_table_total_columns:
+            elif len(data) == config.gene_table_total_columns:
                 # check that the data column is numerical
-                if re.search("^[0-9E\-.]+$",data[config.gene_table_value_index]):
-                    format="genetable"
+                if re.search("^[0-9E\-.]+$", data[config.gene_table_value_index]):
+                    format = "genetable"
     if not format:
-        format="unknown"
+        format = "unknown"
     elif gzipped:
-        format+=".gz"
+        format += ".gz"
 
-    message="File ( " + file + " ) is of format:  " + format
+    message = "File ( " + file + " ) is of format:  " + format
     if config.verbose:
-        print(message+"\n")
+        print(message + "\n")
 
     logger.info(message)
 
     return format
+
 
 def space_in_identifier(file):
     """ Check if there are spaces in the fasta/fastq identifier by
@@ -191,24 +193,26 @@ def space_in_identifier(file):
 
     return space_found
 
+
 def remove_spaces_from_file(file):
     """ Remove any spaces in the file, creating a new file of the output """
 
     # create an unnamed temp file
-    new_file=unnamed_temp_file()
+    new_file = unnamed_temp_file()
 
     try:
         file_handle_read = open(file, "rt")
         file_handle_write = open(new_file, "wt")
         for line in file_handle_read:
-            file_handle_write.write(line.replace(" ",""))
+            file_handle_write.write(line.replace(" ", ""))
         file_handle_read.close()
         file_handle_write.close()
     except (EnvironmentError, UnicodeDecodeError):
         logger.info("Unable to write new file after removing spaces in identifier")
-        new_file=""
+        new_file = ""
 
     return new_file
+
 
 def bam_to_sam(bam_file):
     """
@@ -216,12 +220,12 @@ def bam_to_sam(bam_file):
     """
 
     # create a unnamed temp file
-    new_file=unnamed_temp_file()
+    new_file = unnamed_temp_file()
 
-    exe="samtools"
-    args=["view","-h",bam_file,"-o",new_file]
+    exe = "samtools"
+    args = ["view", "-h", bam_file, "-o", new_file]
 
-    message="Converting bam file to sam format ..."
+    message = "Converting bam file to sam format ..."
     print(message)
     logger.info(message)
 
@@ -229,34 +233,36 @@ def bam_to_sam(bam_file):
 
     return new_file
 
+
 def gunzip_file(gzip_file):
     """
     Return a new copy of the file that is not gzipped
     The new file will be placed in the unnamed temp folder
     """
 
-    message="Decompressing gzipped file ..."
-    print(message+"\n")
+    message = "Decompressing gzipped file ..."
+    print(message + "\n")
     logger.info(message)
 
     try:
-        file_handle_gzip=gzip.open(gzip_file,"rt")
+        file_handle_gzip = gzip.open(gzip_file, "rt")
 
         # create a unnamed temp file
-        new_file=unnamed_temp_file()
+        new_file = unnamed_temp_file()
 
         # write the gunzipped file
-        file_handle=open(new_file,"wt")
+        file_handle = open(new_file, "wt")
         shutil.copyfileobj(file_handle_gzip, file_handle)
 
     except EnvironmentError:
         print("Critical Error: Unable to unzip input file: " + gzip_file)
-        new_file=""
+        new_file = ""
     finally:
         file_handle.close()
         file_handle_gzip.close()
 
     return new_file
+
 
 def double_sort(pathways_dictionary):
     """
@@ -264,9 +270,9 @@ def double_sort(pathways_dictionary):
     then for duplicate values sorted alphabetically by key
     """
 
-    sorted_keys=[]
-    prior_value=""
-    store=[]
+    sorted_keys = []
+    prior_value = ""
+    store = []
     for pathway in sorted(pathways_dictionary, key=pathways_dictionary.get, reverse=True):
         if prior_value == pathways_dictionary[pathway]:
             if not store:
@@ -274,14 +280,15 @@ def double_sort(pathways_dictionary):
             store.append(pathway)
         else:
             if store:
-                sorted_keys+=sorted(store)
-                store=[]
-            prior_value=pathways_dictionary[pathway]
+                sorted_keys += sorted(store)
+                store = []
+            prior_value = pathways_dictionary[pathway]
             sorted_keys.append(pathway)
 
     if store:
-        sorted_keys+=sorted(store)
+        sorted_keys += sorted(store)
     return sorted_keys
+
 
 def unnamed_temp_file(prefix=None):
     """
@@ -290,15 +297,15 @@ def unnamed_temp_file(prefix=None):
     """
 
     if not prefix:
-        prefix="tmp"
+        prefix = "tmp"
 
     try:
-        file_out, new_file=tempfile.mkstemp(dir=config.unnamed_temp_dir,prefix=prefix)
+        file_out, new_file = tempfile.mkstemp(dir=config.unnamed_temp_dir, prefix=prefix)
         os.close(file_out)
     except EnvironmentError:
         sys.exit("ERROR: Unable to create temp file in directory: " + config.unnamed_temp_dir)
 
-    return(new_file)
+    return (new_file)
 
 
 def name_temp_file(file_name):
@@ -308,7 +315,8 @@ def name_temp_file(file_name):
     """
 
     return os.path.join(config.temp_dir,
-       config.file_basename + file_name)
+                        config.file_basename + file_name)
+
 
 def file_exists_readable(file, raise_IOError=None):
     """
@@ -317,7 +325,7 @@ def file_exists_readable(file, raise_IOError=None):
     """
 
     if not os.path.isfile(file):
-        message="Can not find file "+ file
+        message = "Can not find file " + file
         logger.critical(message)
         if raise_IOError:
             print("CRITICAL ERROR: " + message)
@@ -326,13 +334,14 @@ def file_exists_readable(file, raise_IOError=None):
             sys.exit("CRITICAL ERROR: " + message)
 
     if not os.access(file, os.R_OK):
-        message="Not able to read file " + file
+        message = "Not able to read file " + file
         logger.critical(message)
         if raise_IOError:
             print("CRITICAL ERROR: " + message)
             raise IOError
         else:
             sys.exit("CRITICAL ERROR: " + message)
+
 
 def add_exe_to_path(exe_dir):
     """ 
@@ -343,16 +352,18 @@ def add_exe_to_path(exe_dir):
 
     os.environ["PATH"] = exe_dir + os.pathsep + os.environ["PATH"]
 
+
 def add_directory_to_pythonpath(dir):
     """
     Prepend the directory to the PYTHONPATH if not currently included
     """
 
     # check if the directory is already at the beginning of the list
-    if not os.path.samefile(sys.path[0],dir):
+    if not os.path.samefile(sys.path[0], dir):
         # add directory to beginning of path list
         logger.debug("Add directory, %s, to pythonpath", dir)
-        sys.path.insert(1,dir)
+        sys.path.insert(1, dir)
+
 
 def find_exe_in_path(exe):
     """
@@ -361,11 +372,12 @@ def find_exe_in_path(exe):
 
     paths = os.environ["PATH"].split(os.pathsep)
     for path in paths:
-        fullexe = os.path.join(path,exe)
+        fullexe = os.path.join(path, exe)
         if os.path.exists(fullexe):
-            if os.access(fullexe,os.X_OK):
+            if os.access(fullexe, os.X_OK):
                 return True
     return False
+
 
 def return_exe_path(exe):
     """
@@ -373,11 +385,12 @@ def return_exe_path(exe):
     """
     paths = os.environ["PATH"].split(os.pathsep)
     for path in paths:
-        fullexe = os.path.join(path,exe)
+        fullexe = os.path.join(path, exe)
         if os.path.exists(fullexe) and os.path.isfile(fullexe):
-            if os.access(fullexe,os.X_OK):
+            if os.access(fullexe, os.X_OK):
                 return path
     return ""
+
 
 def return_module_path(module):
     """
@@ -387,77 +400,78 @@ def return_module_path(module):
     # if this is the full path to the module then return the parent directory
     if os.path.isabs(module):
         if os.path.exists(module):
-            return os.path.abspath(os.path.join(module,os.pardir))
+            return os.path.abspath(os.path.join(module, os.pardir))
     else:
-    # search for the path to the module
+        # search for the path to the module
         for path in sys.path:
-            full_module = os.path.join(path,module)
+            full_module = os.path.join(path, module)
             if os.path.exists(full_module):
                 return path
     return ""
 
-def check_software_version(exe,version,warning=False):
+
+def check_software_version(exe, version, warning=False):
     """
     Determine if the software is of the correct version
     """
 
-    version_required=str(version["major"])+"."+str(version["minor"])
+    version_required = str(version["major"]) + "." + str(version["minor"])
     if "second minor" in version:
-        version_required+="."+str(version["second minor"])
+        version_required += "." + str(version["second minor"])
 
-    logger.debug("Check software, %s, for required version, %s",exe,version_required)
+    logger.debug("Check software, %s, for required version, %s", exe, version_required)
 
     if not find_exe_in_path(exe):
-        message="Can not find software " + exe
+        message = "Can not find software " + exe
         logger.critical(message)
         sys.exit("CRITICAL ERROR: " + message)
 
     try:
-        process = subprocess.Popen([exe,version["flag"]],stderr=subprocess.STDOUT,
-            stdout=subprocess.PIPE, universal_newlines=True)
-        process_out=process.communicate()[0]
+        process = subprocess.Popen([exe, version["flag"]], stderr=subprocess.STDOUT,
+                                   stdout=subprocess.PIPE, universal_newlines=True)
+        process_out = process.communicate()[0]
     except EnvironmentError:
-        message="Error trying to call software version"
+        message = "Error trying to call software version"
         logger.debug(message)
 
     try:
         # find the version string and remove a "v" and ":" if present
-        version_line=list(filter(lambda x: x, process_out.split("\n")))[version["line"]]
-        version_line_split=version_line.split(" ")
-        version_string=version_line_split[version["column"]]
-        current_version=version_string.replace("v","").replace(":","").split(".")
-        current_major_version=int(current_version[0])
-        current_minor_version=int(current_version[1])
+        version_line = list(filter(lambda x: x, process_out.split("\n")))[version["line"]]
+        version_line_split = version_line.split(" ")
+        version_string = version_line_split[version["column"]]
+        current_version = version_string.replace("v", "").replace(":", "").split(".")
+        current_major_version = int(current_version[0])
+        current_minor_version = int(current_version[1])
         if "second minor" in version:
-            current_second_minor_version=int(current_version[2])
-        current_version=str(current_major_version)+"."+str(current_minor_version)
+            current_second_minor_version = int(current_version[2])
+        current_version = str(current_major_version) + "." + str(current_minor_version)
         if "second minor" in version:
-            current_version+="."+str(current_second_minor_version)
-    except (NameError,KeyError,ValueError,IndexError):
-        message="Can not call software version for " + exe
+            current_version += "." + str(current_second_minor_version)
+    except (NameError, KeyError, ValueError, IndexError):
+        message = "Can not call software version for " + exe
         if warning:
             logger.warning(message)
             print("WARNING: " + message + "\n")
-            current_major_version=0
-            current_minor_version=0
-            current_version="UNK"
+            current_major_version = 0
+            current_minor_version = 0
+            current_version = "UNK"
         else:
             logger.critical(message)
             sys.exit("CRITICAL ERROR: " + message + "\n")
 
-    prior_version=False
+    prior_version = False
     if version["major"] > current_major_version:
-        prior_version=True
+        prior_version = True
     elif (version["major"] == current_major_version and version["minor"] > current_minor_version):
-        prior_version=True
+        prior_version = True
     elif "second minor" in version:
         if (version["major"] == current_major_version and version["minor"] == current_minor_version
-            and version["second minor"] > current_second_minor_version):
-            prior_version=True
+                and version["second minor"] > current_second_minor_version):
+            prior_version = True
 
-    if prior_version and not current_version=="UNK":
-        message=("Please update " + exe + " from version " + current_version
-                 + " to version " + version_required)
+    if prior_version and not current_version == "UNK":
+        message = ("Please update " + exe + " from version " + current_version
+                   + " to version " + version_required)
         if warning:
             logger.warning(message)
             print("WARNING: " + message + "\n")
@@ -466,13 +480,13 @@ def check_software_version(exe,version,warning=False):
             sys.exit("CRITICAL ERROR: " + message + "\n")
 
     # log version of software
-    message="Using " + exe + " version " + current_version
+    message = "Using " + exe + " version " + current_version
     logger.info(message)
 
 
 class ReportHook():
     def __init__(self):
-        self.start_time=time.time()
+        self.start_time = time.time()
 
     def report(self, blocknum, block_size, total_size):
         """
@@ -480,25 +494,25 @@ class ReportHook():
         """
 
         if blocknum == 0:
-            self.start_time=time.time()
+            self.start_time = time.time()
             if total_size > 0:
                 print("Downloading file of size: " + "{:.2f}".format(byte_to_gigabyte(total_size)) + " GB\n")
         else:
-            total_downloaded=blocknum*block_size
+            total_downloaded = blocknum * block_size
             status = "{:3.2f} GB ".format(byte_to_gigabyte(total_downloaded))
 
             if total_size > 0:
-                percent_downloaded=total_downloaded * 100.0 / total_size
+                percent_downloaded = total_downloaded * 100.0 / total_size
                 # use carriage return plus sys.stdout to overwrite stdout
-                download_rate=total_downloaded/(time.time()-self.start_time)
-                estimated_time=(total_size-total_downloaded)/download_rate
-                estimated_minutes=int(estimated_time/60.0)
-                estimated_seconds=estimated_time-estimated_minutes*60.0
-                status +="{:3.2f}".format(percent_downloaded) + " %  " + \
-                    "{:5.2f}".format(byte_to_megabyte(download_rate)) + " MB/sec " + \
-                    "{:2.0f}".format(estimated_minutes) + " min " + \
-                    "{:2.0f}".format(estimated_seconds) + " sec "
-            status+="        \r"
+                download_rate = total_downloaded / (time.time() - self.start_time)
+                estimated_time = (total_size - total_downloaded) / download_rate
+                estimated_minutes = int(estimated_time / 60.0)
+                estimated_seconds = estimated_time - estimated_minutes * 60.0
+                status += "{:3.2f}".format(percent_downloaded) + " %  " + \
+                          "{:5.2f}".format(byte_to_megabyte(download_rate)) + " MB/sec " + \
+                          "{:2.0f}".format(estimated_minutes) + " min " + \
+                          "{:2.0f}".format(estimated_seconds) + " sec "
+            status += "        \r"
             sys.stdout.write(status)
 
 
@@ -510,6 +524,7 @@ def download_tar_and_extract_with_progress_messages(url, filename, folder):
     # check for local file
     pass
 
+
 def remove_file(file):
     """
     If file exists, then remove
@@ -520,14 +535,15 @@ def remove_file(file):
             os.unlink(file)
             logger.debug("Remove file: %s", file)
     except OSError:
-        message="Unable to remove file"
+        message = "Unable to remove file"
         logger.error(message)
+
 
 def check_outfiles(outfiles):
     """
     If outfiles already_exist, then remove or bypass
     """
-    bypass=[]
+    bypass = []
     for file in outfiles:
         if os.path.isfile(file):
             if config.resume and os.path.getsize(file) > 0:
@@ -544,6 +560,7 @@ def check_outfiles(outfiles):
         return False
     else:
         return True
+
 
 class Worker(threading.Thread):
     """
@@ -564,8 +581,8 @@ class Worker(threading.Thread):
         """
         while True:
             try:
-                id,command = self.work_queue.get()
-                self.process(id,command)
+                id, command = self.work_queue.get()
+                self.process(id, command)
             finally:
                 self.work_queue.task_done()
 
@@ -577,13 +594,14 @@ class Worker(threading.Thread):
         try:
             execute_command_args_convert(command)
             with self.exit_codes_lock:
-                self.exit_codes[id]=0
+                self.exit_codes[id] = 0
         # Record the error in the exit codes              
         except (EnvironmentError, subprocess.CalledProcessError):
             with self.exit_codes_lock:
-                self.exit_codes[id]=-1
+                self.exit_codes[id] = -1
 
-def command_threading(threads,commands):
+
+def command_threading(threads, commands):
     """
     Process a set of commands using a set of worker threads
     """
@@ -592,32 +610,33 @@ def command_threading(threads,commands):
     work_queue = queue.Queue()
 
     # Create a set of worker threads
-    exit_codes={}
+    exit_codes = {}
     for number in range(threads):
         worker = Worker(work_queue, exit_codes)
         worker.daemon = True
         worker.start()
 
     # Add the work to the queue and start the queue
-    commands_by_id={}
-    for id,command in enumerate(commands):
-        work_queue.put((id,command))
-        command=" ".join([command[0]]+[str(i) for i in command[1]])
-        commands_by_id[id]=command
+    commands_by_id = {}
+    for id, command in enumerate(commands):
+        work_queue.put((id, command))
+        command = " ".join([command[0]] + [str(i) for i in command[1]])
+        commands_by_id[id] = command
     work_queue.join()
 
     # Check for any errors in the threads
-    error_commands=[]
+    error_commands = []
     for id in exit_codes:
         if exit_codes[id] != 0:
             error_commands.append("Error message returned from command for thread task "
-                + str(id) + ": " + commands_by_id[id]+"\n")
+                                  + str(id) + ": " + commands_by_id[id] + "\n")
 
     if error_commands:
-        message="\nCRITICAL ERROR: Unable to process all thread commands.\n\n"
-        message+="\n".join(error_commands)
+        message = "\nCRITICAL ERROR: Unable to process all thread commands.\n\n"
+        message += "\n".join(error_commands)
         logger.critical(message)
         sys.exit(message)
+
 
 def execute_command_args_convert(args):
     """
@@ -628,16 +647,16 @@ def execute_command_args_convert(args):
 
 
 def execute_command(exe, args, infiles, outfiles, stdout_file=None,
-        stdin_file=None, raise_error=None, stderr_file=None):
+                    stdin_file=None, raise_error=None, stderr_file=None):
     """
     Execute third party software or shell command with files
     """
 
     if exe == sys.executable:
         # check that the python module can be found
-        module_path=return_module_path(args[0])
+        module_path = return_module_path(args[0])
         if not module_path:
-            message="Can not find python module " + args[0]
+            message = "Can not find python module " + args[0]
             logger.critical(message)
             if raise_error:
                 raise EnvironmentError
@@ -645,14 +664,14 @@ def execute_command(exe, args, infiles, outfiles, stdout_file=None,
                 sys.exit("CRITICAL ERROR: " + message)
         # update the module to the full path if not already the full path
         elif not os.path.isabs(args[0]):
-            args[0]=os.path.join(module_path,args[0])
+            args[0] = os.path.join(module_path, args[0])
 
         logger.debug("Using python module : " + args[0])
     else:
         # check that the executable can be found
-        exe_path=return_exe_path(exe)
+        exe_path = return_exe_path(exe)
         if not exe_path:
-            message="Can not find executable " + exe
+            message = "Can not find executable " + exe
             logger.critical(message)
             if raise_error:
                 raise EnvironmentError
@@ -660,7 +679,7 @@ def execute_command(exe, args, infiles, outfiles, stdout_file=None,
                 sys.exit("CRITICAL ERROR: " + message)
         # update the executable to the full path
         else:
-            exe=os.path.join(exe_path,exe)
+            exe = os.path.join(exe_path, exe)
 
         logger.debug("Using software: " + exe)
 
@@ -669,30 +688,30 @@ def execute_command(exe, args, infiles, outfiles, stdout_file=None,
         file_exists_readable(file, raise_IOError=raise_error)
 
     # check if outfiles already exist
-    bypass=check_outfiles(outfiles)
+    bypass = check_outfiles(outfiles)
 
     # convert numbers to strings
-    args=[str(i) for i in args]
+    args = [str(i) for i in args]
 
     if not bypass:
 
-        cmd=[exe]+args
+        cmd = [exe] + args
 
-        message=" ".join(cmd)
-        logger.info("Execute command: "+ message)
+        message = " ".join(cmd)
+        logger.info("Execute command: " + message)
         if config.verbose:
-            print("\n"+message+"\n")
+            print("\n" + message + "\n")
 
         # Open the input and output files (stdin, stdout, stderr)
-        stdin=None
-        stdout=None
-        stderr=None
+        stdin = None
+        stdout = None
+        stderr = None
 
         if stdin_file:
             try:
-                stdin=open(stdin_file,"rt")
+                stdin = open(stdin_file, "rt")
             except EnvironmentError:
-                message="Unable to open file: " + stdin_file
+                message = "Unable to open file: " + stdin_file
                 logger.critical(message)
                 if raise_error:
                     raise EnvironmentError
@@ -708,9 +727,9 @@ def execute_command(exe, args, infiles, outfiles, stdout_file=None,
                 mode = "w"
 
             try:
-                stdout=open(stdout_file_name,mode)
+                stdout = open(stdout_file_name, mode)
             except EnvironmentError:
-                message="Unable to open file: " + stdout_file_name
+                message = "Unable to open file: " + stdout_file_name
                 logger.critical(message)
                 if raise_error:
                     raise EnvironmentError
@@ -719,9 +738,9 @@ def execute_command(exe, args, infiles, outfiles, stdout_file=None,
 
         if stderr_file:
             try:
-                stderr=open(stderr_file,"w")
+                stderr = open(stderr_file, "w")
             except EnvironmentError:
-                message="Unable to open file: " + stderr_file
+                message = "Unable to open file: " + stderr_file
                 logger.critical(message)
                 if raise_error:
                     raise EnvironmentError
@@ -763,7 +782,8 @@ def execute_command(exe, args, infiles, outfiles, stdout_file=None,
                                 cmd += [c_para]
                                 matched = True
                             if matched:
-                                message = "YSJ: Found recommended parameters: {},{}, kill subprocess".format(b_para, c_para)
+                                message = "YSJ: Found recommended parameters: {},{}, kill subprocess".format(b_para,
+                                                                                                             c_para)
                                 print(message)
                                 logger.debug(message)
                                 # exit subprocess
@@ -780,9 +800,9 @@ def execute_command(exe, args, infiles, outfiles, stdout_file=None,
                 # p_out = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
                 # logger.debug(p_out)
         except (EnvironmentError, subprocess.CalledProcessError) as e:
-            message="Error executing: " + " ".join(cmd) + "\n"
+            message = "Error executing: " + " ".join(cmd) + "\n"
             if hasattr(e, 'output') and e.output:
-                message+="\nError message returned from " + os.path.basename(exe) + " :\n" + e.output.decode("utf-8")
+                message += "\nError message returned from " + os.path.basename(exe) + " :\n" + e.output.decode("utf-8")
             logger.critical(message)
             logger.critical("TRACEBACK: \n" + traceback.format_exc())
             log_system_status()
@@ -801,6 +821,7 @@ def execute_command(exe, args, infiles, outfiles, stdout_file=None,
         else:
             print("Bypass\n")
 
+
 def fasta_or_fastq(file):
     """
     Check to see if a file is of fasta or fastq format
@@ -818,7 +839,7 @@ def fasta_or_fastq(file):
     Returns error if not of fasta or fastq format
     """
 
-    format="error"
+    format = "error"
 
     # check file exists
     file_exists_readable(file)
@@ -832,46 +853,47 @@ def fasta_or_fastq(file):
     # check that second line is only nucleotides or amino acids
     if re.search("^[A-Z|a-z]+$", second_line):
         # check first line to determine fasta or fastq format
-        if re.search("^@",first_line):
-            format="fastq"
-        if re.search("^>",first_line):
-            format="fasta"
+        if re.search("^@", first_line):
+            format = "fastq"
+        if re.search("^>", first_line):
+            format = "fasta"
 
     file_handle.close()
 
     return format
+
 
 def count_reads(file):
     """
     Count the total number of reads in a file
     """
 
-    file_handle_read=open(file,"rt")
+    file_handle_read = open(file, "rt")
 
-    line=file_handle_read.readline()
+    line = file_handle_read.readline()
 
-    file_type=fasta_or_fastq(file)
+    file_type = fasta_or_fastq(file)
     if file_type == "fastq":
-        read_token="@"
+        read_token = "@"
     else:
-        read_token=">"
+        read_token = ">"
 
-    sequence_count=0
-    lines_since_last_sequence_id=0
+    sequence_count = 0
+    lines_since_last_sequence_id = 0
     while line:
-        if re.search("^"+read_token,line):
+        if re.search("^" + read_token, line):
             # check that this is not a quality score line
             if file_type == "fastq":
-                if lines_since_last_sequence_id>2 or not sequence_count:
-                    sequence_count+=1
-                    lines_since_last_sequence_id=0
+                if lines_since_last_sequence_id > 2 or not sequence_count:
+                    sequence_count += 1
+                    lines_since_last_sequence_id = 0
                 else:
-                    lines_since_last_sequence_id+=1
+                    lines_since_last_sequence_id += 1
             else:
-                sequence_count+=1
+                sequence_count += 1
         elif file_type == "fastq":
-            lines_since_last_sequence_id+=1
-        line=file_handle_read.readline()
+            lines_since_last_sequence_id += 1
+        line = file_handle_read.readline()
 
     file_handle_read.close()
 
@@ -887,9 +909,10 @@ def estimate_unaligned_reads(input_fastq, unaligned_fastq):
     file_exists_readable(input_fastq)
     file_exists_readable(unaligned_fastq)
 
-    percent=count_reads(unaligned_fastq)/float(count_reads(input_fastq)) * 100
+    percent = count_reads(unaligned_fastq) / float(count_reads(input_fastq)) * 100
 
     return format_float_to_string(percent)
+
 
 def estimate_unaligned_reads_stored(input_fastq, unaligned_store):
     """
@@ -902,9 +925,10 @@ def estimate_unaligned_reads_stored(input_fastq, unaligned_store):
         file_exists_readable(input_fastq)
         unaligned_store.set_initial_read_count(count_reads(input_fastq))
 
-    percent=unaligned_store.count_reads()/float(unaligned_store.get_initial_read_count()) * 100
+    percent = unaligned_store.count_reads() / float(unaligned_store.get_initial_read_count()) * 100
 
     return format_float_to_string(percent)
+
 
 def remove_directory(dir):
     """
@@ -919,6 +943,7 @@ def remove_directory(dir):
     else:
         logger.debug("Request to remove directory that does not exist: " + dir)
 
+
 def break_up_fasta_file(fasta_file, max_seqs):
     """
     Break up a fasta file into smaller fasta files with max_seqs
@@ -927,39 +952,40 @@ def break_up_fasta_file(fasta_file, max_seqs):
     # check file exists
     file_exists_readable(fasta_file)
 
-    file_handle_read=open(fasta_file,"rt")
+    file_handle_read = open(fasta_file, "rt")
 
-    line=file_handle_read.readline()
+    line = file_handle_read.readline()
 
-    new_file=unnamed_temp_file()
-    file_out=open(new_file,"w")
+    new_file = unnamed_temp_file()
+    file_out = open(new_file, "w")
 
-    fasta_files=[new_file]
+    fasta_files = [new_file]
 
-    current_seq=0
+    current_seq = 0
     while line:
-        if not re.search("^>",line):
+        if not re.search("^>", line):
             file_out.write(line)
         else:
             if current_seq == max_seqs:
                 # close current file and open new
                 file_out.close()
 
-                new_file=unnamed_temp_file()
-                file_out=open(new_file,"w")
+                new_file = unnamed_temp_file()
+                file_out = open(new_file, "w")
 
-                fasta_files+=[new_file]
+                fasta_files += [new_file]
                 file_out.write(line)
-                current_seq=1
+                current_seq = 1
             else:
-                current_seq+=1
+                current_seq += 1
                 file_out.write(line)
-        line=file_handle_read.readline()
+        line = file_handle_read.readline()
 
     file_out.close()
     file_handle_read.close()
 
     return fasta_files
+
 
 def fastq_to_fasta(file, apply_pick_frames=None, length_annotation=None):
     """
@@ -986,51 +1012,52 @@ def fastq_to_fasta(file, apply_pick_frames=None, length_annotation=None):
 
     line = file_handle_read.readline()
 
-    new_file=unnamed_temp_file()
-    file_out=open(new_file,"w")
+    new_file = unnamed_temp_file()
+    file_out = open(new_file, "w")
 
-    sequence=""
-    sequence_id=""
+    sequence = ""
+    sequence_id = ""
     while line:
-        if re.search("^@",line):
+        if re.search("^@", line):
             # write previous sequence
             if sequence:
                 if apply_pick_frames:
-                    sequences=pick_frames.pick_frames(sequence)
+                    sequences = pick_frames.pick_frames(sequence)
                 else:
-                    sequences=[sequence]
+                    sequences = [sequence]
 
                 if length_annotation:
-                    sequence_id=add_length_annotation(sequence_id,len(sequence))
+                    sequence_id = add_length_annotation(sequence_id, len(sequence))
 
                 for sequence in sequences:
-                    file_out.write(sequence_id+"\n")
-                    file_out.write(sequence+"\n")
+                    file_out.write(sequence_id + "\n")
+                    file_out.write(sequence + "\n")
 
-            sequence_id=line.replace("@",">",1).rstrip()
-            sequence=""
+            sequence_id = line.replace("@", ">", 1).rstrip()
+            sequence = ""
         elif re.search("^[A|a|T|t|G|g|C|c|N|n]+$", line):
-            sequence+=line.rstrip()
-        line=file_handle_read.readline()
+            sequence += line.rstrip()
+        line = file_handle_read.readline()
 
     # write out the last sequence
     if sequence:
         if apply_pick_frames:
-            sequences=pick_frames.pick_frames(sequence)
+            sequences = pick_frames.pick_frames(sequence)
         else:
-            sequences=[sequence]
+            sequences = [sequence]
 
         if length_annotation:
-            sequence_id=add_length_annotation(sequence_id,len(sequence))
+            sequence_id = add_length_annotation(sequence_id, len(sequence))
 
         for sequence in sequences:
-            file_out.write(sequence_id+"\n")
-            file_out.write(sequence+"\n")
+            file_out.write(sequence_id + "\n")
+            file_out.write(sequence + "\n")
 
     file_out.close()
     file_handle_read.close()
 
     return new_file
+
 
 def pick_frames_from_fasta(file, length_annotation=None):
     """
@@ -1044,41 +1071,42 @@ def pick_frames_from_fasta(file, length_annotation=None):
 
     line = file_handle_read.readline()
 
-    new_file=unnamed_temp_file()
-    file_out=open(new_file,"w")
+    new_file = unnamed_temp_file()
+    file_out = open(new_file, "w")
 
-    sequence=""
+    sequence = ""
     while line:
-        if not re.search("^>",line):
-            sequence+=line.rstrip()
+        if not re.search("^>", line):
+            sequence += line.rstrip()
         else:
             # if a sequence has been read in then pick frames and write
             if sequence:
-                sequences=pick_frames.pick_frames(sequence)
+                sequences = pick_frames.pick_frames(sequence)
 
                 if length_annotation:
-                    sequence_id=add_length_annotation(sequence_id,len(sequence))
+                    sequence_id = add_length_annotation(sequence_id, len(sequence))
 
                 for sequence in sequences:
-                    file_out.write(sequence_id+"\n")
-                    file_out.write(sequence+"\n")
-                sequence=""
-            sequence_id=line.rstrip()
-        line=file_handle_read.readline()
+                    file_out.write(sequence_id + "\n")
+                    file_out.write(sequence + "\n")
+                sequence = ""
+            sequence_id = line.rstrip()
+        line = file_handle_read.readline()
     # if a sequence has been read in then pick frames and write
     if sequence:
-        sequences=pick_frames.pick_frames(sequence)
+        sequences = pick_frames.pick_frames(sequence)
 
         if length_annotation:
-            sequence_id=add_length_annotation(sequence_id,len(sequence))
+            sequence_id = add_length_annotation(sequence_id, len(sequence))
 
         for sequence in sequences:
-            file_out.write(sequence_id+"\n")
-            file_out.write(sequence+"\n")
+            file_out.write(sequence_id + "\n")
+            file_out.write(sequence + "\n")
     file_out.close()
     file_handle_read.close()
 
     return new_file
+
 
 def length_annotate_fasta(file):
     """
@@ -1092,32 +1120,33 @@ def length_annotate_fasta(file):
 
     line = file_handle_read.readline()
 
-    new_file=unnamed_temp_file()
-    file_out=open(new_file,"w")
+    new_file = unnamed_temp_file()
+    file_out = open(new_file, "w")
 
-    sequence=""
+    sequence = ""
     while line:
-        if not re.search("^>",line):
-            sequence+=line.rstrip()
+        if not re.search("^>", line):
+            sequence += line.rstrip()
         else:
             # if a sequence has been read in then annotate and write
             if sequence:
-                sequence_id=add_length_annotation(sequence_id,len(sequence))
-                file_out.write(sequence_id+"\n")
-                file_out.write(sequence+"\n")
-                sequence=""
-            sequence_id=line.rstrip()
-        line=file_handle_read.readline()
+                sequence_id = add_length_annotation(sequence_id, len(sequence))
+                file_out.write(sequence_id + "\n")
+                file_out.write(sequence + "\n")
+                sequence = ""
+            sequence_id = line.rstrip()
+        line = file_handle_read.readline()
     # if a sequence has been read in then annotate and write
     if sequence:
-        sequence_id=add_length_annotation(sequence_id,len(sequence))
-        file_out.write(sequence_id+"\n")
-        file_out.write(sequence+"\n")
+        sequence_id = add_length_annotation(sequence_id, len(sequence))
+        file_out.write(sequence_id + "\n")
+        file_out.write(sequence + "\n")
 
     file_out.close()
     file_handle_read.close()
 
     return new_file
+
 
 def tsv_to_biom(tsv_file, biom_file, table_type):
     """
@@ -1127,37 +1156,38 @@ def tsv_to_biom(tsv_file, biom_file, table_type):
     try:
         import biom
     except ImportError:
-        sys.exit("Could not find the biom software."+
-            " This software is required since the output file is a biom file.")
+        sys.exit("Could not find the biom software." +
+                 " This software is required since the output file is a biom file.")
 
     try:
         import numpy
     except ImportError:
-        sys.exit("Could not find the numpy software."+
-            " This software is required since the output file is a biom file.")
+        sys.exit("Could not find the numpy software." +
+                 " This software is required since the output file is a biom file.")
 
     try:
         import h5py
     except ImportError:
-        sys.exit("Could not find the h5py software."+
-            " This software is required since the output file is a biom file.")
+        sys.exit("Could not find the h5py software." +
+                 " This software is required since the output file is a biom file.")
 
     # read the tsv file
-    ids=[]
-    data=[]
+    ids = []
+    data = []
     with open(tsv_file) as file_handle:
-        samples=file_handle.readline().rstrip().split("\t")[1:]
+        samples = file_handle.readline().rstrip().split("\t")[1:]
         for line in file_handle:
-            row=line.rstrip().split("\t")
+            row = line.rstrip().split("\t")
             ids.append(row[0])
             data.append(row[1:])
 
     # reformat the rows into a biom table
-    table=biom.Table(numpy.array(data), ids, samples)
+    table = biom.Table(numpy.array(data), ids, samples)
 
     # write a h5py biom table
     with h5py.File(biom_file, 'w') as file_handle:
         table.to_hdf5(file_handle, table_type)
+
 
 def biom_to_tsv(biom_file):
     """
@@ -1165,17 +1195,18 @@ def biom_to_tsv(biom_file):
     """
 
     # create a unnamed temp file
-    new_tsv_file=unnamed_temp_file()
+    new_tsv_file = unnamed_temp_file()
 
-    exe="biom"
-    args=["convert","-i",biom_file,"-o",new_tsv_file,"--to-tsv"]
+    exe = "biom"
+    args = ["convert", "-i", biom_file, "-o", new_tsv_file, "--to-tsv"]
 
-    message="Converting biom file to tsv ..."
+    message = "Converting biom file to tsv ..."
     logger.info(message)
 
     execute_command(exe, args, [biom_file], [new_tsv_file])
 
     return new_tsv_file
+
 
 def format_float_to_string(number):
     """
@@ -1184,19 +1215,22 @@ def format_float_to_string(number):
 
     return "{:.{digits}f}".format(number, digits=config.output_max_decimals)
 
+
 def byte_to_gigabyte(byte):
     """
     Convert byte value to gigabyte
     """
 
-    return byte / (1024.0**3)
+    return byte / (1024.0 ** 3)
+
 
 def byte_to_megabyte(byte):
     """
     Convert byte value to megabyte
     """
 
-    return byte / (1024.0**2)
+    return byte / (1024.0 ** 2)
+
 
 def byte_to_kilobyte(byte):
     """
@@ -1205,16 +1239,17 @@ def byte_to_kilobyte(byte):
 
     return byte / 1024.0
 
+
 def log_system_status():
     """
     Print the status of the system
     """
 
-    module_available=True
+    module_available = True
     try:
         import psutil
     except ImportError:
-        module_available=False
+        module_available = False
 
     if module_available:
         try:
@@ -1232,18 +1267,18 @@ def log_system_status():
             # record the disk usage
             disk = psutil.disk_usage('/')
             logger.info("Total disk = " + str(byte_to_gigabyte(disk.total)) + " GB")
-            logger.info("Used disk = "+ str(byte_to_gigabyte(disk.used)) + " GB")
+            logger.info("Used disk = " + str(byte_to_gigabyte(disk.used)) + " GB")
             logger.info("Percent disk used = " + str(disk.percent) + " %")
 
             # record information about this current process
-            process=psutil.Process()
-            process_memory=process.memory_info()
-            process_create_time=datetime.datetime.fromtimestamp(
+            process = psutil.Process()
+            process_memory = process.memory_info()
+            process_create_time = datetime.datetime.fromtimestamp(
                 process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
-            process_cpu_times=process.cpu_times()
+            process_cpu_times = process.cpu_times()
             # two calls required to cpu percent for non-blocking as per documentation
-            process_cpu_percent=process.cpu_percent()
-            process_cpu_percent=process.cpu_percent()
+            process_cpu_percent = process.cpu_percent()
+            process_cpu_percent = process.cpu_percent()
 
             logger.info("Process create time = " + process_create_time)
             logger.info("Process user time = " + str(process_cpu_times.user) + " seconds")
@@ -1256,13 +1291,15 @@ def log_system_status():
         except (AttributeError, OSError, TypeError, psutil.Error):
             pass
 
+
 def add_length_annotation(id, length):
     """
     Add the length to the query id
     """
 
     # add the length and handle spaces as translated search will split on spaces
-    return id.split(" ")[0]+config.query_length_annotation_delimiter+str(length)
+    return id.split(" ")[0] + config.query_length_annotation_delimiter + str(length)
+
 
 def remove_length_annotation(id):
     """
@@ -1271,6 +1308,7 @@ def remove_length_annotation(id):
 
     return config.query_length_annotation_delimiter.join(id.split(config.query_length_annotation_delimiter)[:-1])
 
+
 def get_length_annotation(id):
     """
     Try to get the length annotation from the query id
@@ -1278,30 +1316,31 @@ def get_length_annotation(id):
 
     # check for the annotation delimiter
     if config.query_length_annotation_delimiter in id:
-        info=id.split(config.query_length_annotation_delimiter)
+        info = id.split(config.query_length_annotation_delimiter)
         try:
             # the last item is the length
-            length=int(info.pop())
+            length = int(info.pop())
             # the first and remaining items are the id
-            new_id=config.query_length_annotation_delimiter.join(info)
+            new_id = config.query_length_annotation_delimiter.join(info)
         except (ValueError, IndexError):
-            length=1
-            new_id=id
+            length = 1
+            new_id = id
     else:
         # if not present, then return full id and default length
-        new_id=id
-        length=1
+        new_id = id
+        length = 1
 
     return new_id, length
 
+
 def filter_based_on_query_coverage(query_length, query_start_index, query_stop_index,
-    query_coverage_threshold):
+                                   query_coverage_threshold):
     """
     Determine if read should be filtered based on query coverage threshold
     """
 
     if query_length > 1:
-        query_coverage = ( ( abs(query_stop_index - query_start_index) + 1) / float(query_length) )* 100.0
+        query_coverage = ((abs(query_stop_index - query_start_index) + 1) / float(query_length)) * 100.0
     else:
         # if the query length is not provided, default coverage to greater than threshold
         query_coverage = query_coverage_threshold + 1.0
@@ -1312,9 +1351,11 @@ def filter_based_on_query_coverage(query_length, query_start_index, query_stop_i
 
     return filter
 
+
 def get_filtered_translated_alignments(alignment_file_tsv, alignments, apply_filter=None,
-                            log_filter=None, unaligned_reads_store=None,
-                            query_coverage_threshold=config.translated_query_coverage_threshold, identity_threshold=None):
+                                       log_filter=None, unaligned_reads_store=None,
+                                       query_coverage_threshold=config.translated_query_coverage_threshold,
+                                       identity_threshold=None):
     """
     Read through the alignment file, yielding filtered alignments
     Filter based on identity threshold, evalue, and coverage threshold
@@ -1328,61 +1369,61 @@ def get_filtered_translated_alignments(alignment_file_tsv, alignments, apply_fil
     # read through the alignment file to identify ids
     # that correspond to aligned reads
     # all translated alignment files will be of the tabulated blast format
-    file_handle=open(alignment_file_tsv,"rt")
-    line=file_handle.readline()
+    file_handle = open(alignment_file_tsv, "rt")
+    line = file_handle.readline()
 
-    log_evalue=False
-    large_evalue_count=0
-    small_identity_count=0
-    small_query_coverage_count=0
-    percent_identity_convert_error=0
-    alignment_length_convert_error=0
-    evalue_convert_error=0
-    rapsearch_evalue_convert_error=0
+    log_evalue = False
+    large_evalue_count = 0
+    small_identity_count = 0
+    small_query_coverage_count = 0
+    percent_identity_convert_error = 0
+    alignment_length_convert_error = 0
+    evalue_convert_error = 0
+    rapsearch_evalue_convert_error = 0
     while line:
-        if re.search("^#",line):
+        if re.search("^#", line):
             # Check for the rapsearch2 header to determine if these are log(e-value)
-            if re.search(config.blast_delimiter,line):
-                data=line.split(config.blast_delimiter)
-                if len(data)>config.blast_evalue_index:
-                    if re.search("log",data[config.blast_evalue_index]):
-                        log_evalue=True
+            if re.search(config.blast_delimiter, line):
+                data = line.split(config.blast_delimiter)
+                if len(data) > config.blast_evalue_index:
+                    if re.search("log", data[config.blast_evalue_index]):
+                        log_evalue = True
         else:
-            alignment_info=line.split(config.blast_delimiter)
+            alignment_info = line.split(config.blast_delimiter)
 
             # try to obtain the identity value to determine if threshold is met
-            identity=alignment_info[config.blast_identity_index]
+            identity = alignment_info[config.blast_identity_index]
             try:
-                identity=float(identity)
+                identity = float(identity)
             except ValueError:
-                percent_identity_convert_error+=1
-                identity=0.0
+                percent_identity_convert_error += 1
+                identity = 0.0
 
-            queryid=alignment_info[config.blast_query_index]
+            queryid = alignment_info[config.blast_query_index]
 
             # try converting the alignment length to a number
-            alignment_length=alignment_info[config.blast_aligned_length_index]
+            alignment_length = alignment_info[config.blast_aligned_length_index]
             try:
-                alignment_length=float(alignment_length)
+                alignment_length = float(alignment_length)
             except ValueError:
-                alignment_length_convert_error+=1
-                alignment_length=0.0
+                alignment_length_convert_error += 1
+                alignment_length = 0.0
 
             # try converting evalue to float to check if it is a number
-            evalue=alignment_info[config.blast_evalue_index]
+            evalue = alignment_info[config.blast_evalue_index]
             try:
-                evalue=float(evalue)
+                evalue = float(evalue)
             except ValueError:
-                evalue_convert_error+=1
-                evalue=1.0
+                evalue_convert_error += 1
+                evalue = 1.0
 
             # try to get the start and end positions for the query
             try:
                 query_start_index = int(alignment_info[config.blast_query_start_index])
                 query_stop_index = int(alignment_info[config.blast_query_end_index])
             except (ValueError, IndexError):
-                query_start_index=0
-                query_stop_index=0
+                query_start_index = 0
+                query_stop_index = 0
 
             # check for query length annotation
             queryid, query_length = get_length_annotation(queryid)
@@ -1392,52 +1433,52 @@ def get_filtered_translated_alignments(alignment_file_tsv, alignments, apply_fil
                 subject_start_index = int(alignment_info[config.blast_subject_start_index])
                 subject_stop_index = int(alignment_info[config.blast_subject_end_index])
             except (ValueError, IndexError):
-                subject_start_index=0
-                subject_stop_index=0
+                subject_start_index = 0
+                subject_stop_index = 0
 
             # convert rapsearch evalue to blastm8 format if logged
             if log_evalue:
                 try:
-                    evalue=math.pow(10.0, evalue)
+                    evalue = math.pow(10.0, evalue)
                 except (ValueError, OverflowError):
-                    rapsearch_evalue_convert_error+=1
-                    evalue=1.0
+                    rapsearch_evalue_convert_error += 1
+                    evalue = 1.0
 
             # compute the number of matches
-            matches=identity/100.0*alignment_length
+            matches = identity / 100.0 * alignment_length
 
             # get the protein alignment information
             protein_name, gene_length, bug = alignments.process_reference_annotation(
                 alignment_info[config.blast_reference_index])
 
             # check if percent identity is less then threshold
-            filter=False
+            filter = False
             if identity < identity_threshold:
-                filter=True
-                small_identity_count+=1
+                filter = True
+                small_identity_count += 1
 
             # filter alignments with evalues greater than threshold
             if evalue > config.evalue_threshold:
-                filter=True
-                large_evalue_count+=1
+                filter = True
+                large_evalue_count += 1
 
             # filter alignments that do not meet query coverage threshold    
-            if filter_based_on_query_coverage(query_length, query_start_index, query_stop_index, query_coverage_threshold):
-                filter=True
-                small_query_coverage_count+=1
-
+            if filter_based_on_query_coverage(query_length, query_start_index, query_stop_index,
+                                              query_coverage_threshold):
+                filter = True
+                small_query_coverage_count += 1
             if apply_filter:
                 if not filter:
-                    yield ( protein_name, gene_length, queryid, matches, bug,
-                            alignment_length, subject_start_index, subject_stop_index )
+                    yield (protein_name, gene_length, queryid, matches, bug,
+                           alignment_length, subject_start_index, subject_stop_index)
                 elif unaligned_reads_store:
                     # remove the read from the unaligned reads store
                     unaligned_reads_store.remove_id(queryid)
             else:
-                yield ( protein_name, gene_length, queryid, matches, bug,
-                        alignment_length, subject_start_index, subject_stop_index )
+                yield (protein_name, gene_length, queryid, matches, bug,
+                       alignment_length, subject_start_index, subject_stop_index)
 
-        line=file_handle.readline()
+        line = file_handle.readline()
 
     if log_filter:
         logger.debug("Total alignments where percent identity is not a number: " + str(percent_identity_convert_error))
@@ -1452,3 +1493,139 @@ def get_filtered_translated_alignments(alignment_file_tsv, alignments, apply_fil
         logger.debug("Total alignments not included based on small query coverage: " +
                      str(small_query_coverage_count))
 
+
+def get_filtered_translated_alignments_yu(alignment_file_tsv, alignments, apply_filter=None,
+                                          log_filter=None,
+                                          query_coverage_threshold=config.translated_query_coverage_threshold,
+                                          identity_threshold=None):
+    # if identity threshold is not set, use the config default
+    if identity_threshold is None:
+        identity_threshold = config.identity_threshold
+
+    from multiprocessing import Pool
+    from itertools import repeat
+    with Pool(config.threads) as p, \
+            open(alignment_file_tsv, "rt") as file_handle:
+        chunk_size = 1000000 * config.threads
+        lines = file_handle.readlines(chunk_size)
+        while len(lines) > 0:
+            res = p.starmap(line_process, zip(lines,
+                                              repeat(identity_threshold),
+                                              repeat(query_coverage_threshold),
+                                              repeat(apply_filter)))
+            # res = list(filter(None, res))
+            # if len(res) > 0:
+            #     yield res
+            for r in filter(None, res):
+                yield r
+            lines = file_handle.readlines(chunk_size)
+
+
+def line_process(line, identity_threshold, query_coverage_threshold, apply_filter):
+    alignments = store.Alignments()
+    log_evalue = False
+    large_evalue_count = 0
+    small_identity_count = 0
+    small_query_coverage_count = 0
+    percent_identity_convert_error = 0
+    alignment_length_convert_error = 0
+    evalue_convert_error = 0
+    rapsearch_evalue_convert_error = 0
+
+    if line.startswith("#"):
+        # Check for the rapsearch2 header to determine if these are log(e-value)
+        if re.search(config.blast_delimiter, line):
+            data = line.split(config.blast_delimiter)
+            if len(data) > config.blast_evalue_index:
+                if re.search("log", data[config.blast_evalue_index]):
+                    log_evalue = True
+    else:
+        alignment_info = line.split(config.blast_delimiter)
+
+        # try to obtain the identity value to determine if threshold is met
+        identity = alignment_info[config.blast_identity_index]
+        try:
+            identity = float(identity)
+        except ValueError:
+            percent_identity_convert_error += 1
+            identity = 0.0
+
+        queryid = alignment_info[config.blast_query_index]
+
+        # try converting the alignment length to a number
+        alignment_length = alignment_info[config.blast_aligned_length_index]
+        try:
+            alignment_length = float(alignment_length)
+        except ValueError:
+            alignment_length_convert_error += 1
+            alignment_length = 0.0
+
+        # try converting evalue to float to check if it is a number
+        evalue = alignment_info[config.blast_evalue_index]
+        try:
+            evalue = float(evalue)
+        except ValueError:
+            evalue_convert_error += 1
+            evalue = 1.0
+
+        # try to get the start and end positions for the query
+        try:
+            query_start_index = int(alignment_info[config.blast_query_start_index])
+            query_stop_index = int(alignment_info[config.blast_query_end_index])
+        except (ValueError, IndexError):
+            query_start_index = 0
+            query_stop_index = 0
+
+        # check for query length annotation
+        queryid, query_length = get_length_annotation(queryid)
+
+        # try to get the start and end positions for the subject
+        try:
+            subject_start_index = int(alignment_info[config.blast_subject_start_index])
+            subject_stop_index = int(alignment_info[config.blast_subject_end_index])
+        except (ValueError, IndexError):
+            subject_start_index = 0
+            subject_stop_index = 0
+
+        # convert rapsearch evalue to blastm8 format if logged
+        if log_evalue:
+            try:
+                evalue = math.pow(10.0, evalue)
+            except (ValueError, OverflowError):
+                rapsearch_evalue_convert_error += 1
+                evalue = 1.0
+
+        # compute the number of matches
+        matches = identity / 100.0 * alignment_length
+
+        # get the protein alignment information
+        protein_name, gene_length, bug = alignments.process_reference_annotation(
+            alignment_info[config.blast_reference_index])
+
+        # check if percent identity is less then threshold
+        filter = False
+        if identity < identity_threshold:
+            filter = True
+            small_identity_count += 1
+
+        # filter alignments with evalues greater than threshold
+        if evalue > config.evalue_threshold:
+            filter = True
+            large_evalue_count += 1
+
+        # filter alignments that do not meet query coverage threshold
+        if filter_based_on_query_coverage(query_length, query_start_index, query_stop_index,
+                                          query_coverage_threshold):
+            filter = True
+            small_query_coverage_count += 1
+        if apply_filter:
+            if not filter:
+                return (protein_name, gene_length, queryid, matches, bug,
+                       alignment_length, subject_start_index, subject_stop_index)
+            # elif unaligned_reads_store:
+            #     # remove the read from the unaligned reads store
+            #     unaligned_reads_store.remove_id(queryid)
+            return None
+        else:
+            return (protein_name, gene_length, queryid, matches, bug,
+                   alignment_length, subject_start_index, subject_stop_index)
