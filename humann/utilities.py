@@ -1494,13 +1494,16 @@ def get_filtered_translated_alignments(alignment_file_tsv, alignments, apply_fil
                      str(small_query_coverage_count))
 
 
-def get_filtered_translated_alignments_yu(alignment_file_tsv, alignments, apply_filter=None,
-                                          log_filter=None,
-                                          query_coverage_threshold=config.translated_query_coverage_threshold,
-                                          identity_threshold=None):
+def get_filtered_translated_alignments_parallel(alignment_file_tsv, alignments, apply_filter=None,
+                                                log_filter=None,
+                                                query_coverage_threshold=config.translated_query_coverage_threshold,
+                                                identity_threshold=None):
     # if identity threshold is not set, use the config default
     if identity_threshold is None:
         identity_threshold = config.identity_threshold
+    # create alignments instance if none is passed
+    # if alignments is None:
+    alignments = store.Alignments()
 
     from multiprocessing import Pool
     from itertools import repeat
@@ -1510,19 +1513,16 @@ def get_filtered_translated_alignments_yu(alignment_file_tsv, alignments, apply_
         lines = file_handle.readlines(chunk_size)
         while len(lines) > 0:
             res = p.starmap(line_process, zip(lines,
+                                              repeat(alignments),
                                               repeat(identity_threshold),
                                               repeat(query_coverage_threshold),
                                               repeat(apply_filter)))
-            # res = list(filter(None, res))
-            # if len(res) > 0:
-            #     yield res
             for r in filter(None, res):
                 yield r
             lines = file_handle.readlines(chunk_size)
 
 
-def line_process(line, identity_threshold, query_coverage_threshold, apply_filter):
-    alignments = store.Alignments()
+def line_process(line, alignments, identity_threshold, query_coverage_threshold, apply_filter):
     log_evalue = False
     large_evalue_count = 0
     small_identity_count = 0
@@ -1620,12 +1620,15 @@ def line_process(line, identity_threshold, query_coverage_threshold, apply_filte
             small_query_coverage_count += 1
         if apply_filter:
             if not filter:
-                return (protein_name, gene_length, queryid, matches, bug,
-                       alignment_length, subject_start_index, subject_stop_index)
+                alignment_info = (protein_name, gene_length, queryid, matches, bug,
+                                  alignment_length, subject_start_index, subject_stop_index)
+            # TODO 移除unaligned_reads_store
             # elif unaligned_reads_store:
             #     # remove the read from the unaligned reads store
             #     unaligned_reads_store.remove_id(queryid)
-            return None
+            else:
+                return None
         else:
-            return (protein_name, gene_length, queryid, matches, bug,
-                   alignment_length, subject_start_index, subject_stop_index)
+            alignment_info = (protein_name, gene_length, queryid, matches, bug,
+                              alignment_length, subject_start_index, subject_stop_index)
+        return alignment_info
