@@ -1,2 +1,4 @@
 humann/data
 humann/tests
+humann.egg-info
+build
