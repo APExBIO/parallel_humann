@@ -967,7 +967,7 @@ def main():
         # Create the custom database from the bugs list
         custom_database = ""
         if not config.bypass_nucleotide_index:
-            custom_database = prescreen.create_custom_database(config.nucleotide_database, bug_file)
+            # custom_database = prescreen.create_custom_database(config.nucleotide_database, bug_file)
             start_time = timestamp_message("custom database creation", start_time)
         else:
             custom_database = "Bypass"
