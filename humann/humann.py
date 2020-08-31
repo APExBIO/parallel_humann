@@ -65,7 +65,7 @@ from .quantify import modules
 # name global logging instance
 logger = logging.getLogger(__name__)
 
-VERSION = "3.0.0.alpha.4-edited-by-sjyu"
+VERSION = "3.0.0.alpha.4-parallel"
 MAX_SIZE_DEMO_INPUT_FILE = 10
 
 
@@ -976,27 +976,21 @@ def main():
         if custom_database != "Empty" and not config.bypass_nucleotide_search:
             if not config.bypass_nucleotide_index:
                 # run bowtie index
-                # nucleotide_index_file = nucleotide.index(custom_database)
-                custom_database = "/home/yusj/workspace/S11/S11_kneaddata_humann_temp/S11_kneaddata_custom_chocophlan_database.ffn"
-                nucleotide_index_file = "/home/yusj/workspace/S11/S11_kneaddata_humann_temp/S11_kneaddata_bowtie2_index"
-                print(nucleotide_index_file)
+                nucleotide_index_file = nucleotide.index(custom_database)
                 start_time = timestamp_message("database index", start_time)
             else:
                 nucleotide_index_file = nucleotide.find_index(config.nucleotide_database)
 
-            # nucleotide_alignment_file = nucleotide.alignment(args.input,
-            #                                                  nucleotide_index_file)
-            nucleotide_alignment_file = "/home/yusj/workspace/S11/S11_kneaddata_humann_temp" \
-                                        "/S11_kneaddata_bowtie2_aligned.sam"
-            # nucleotide_alignment_file = "/home/data/yusj/C1_kneaddata_bowtie2_aligned.sam"
+            # Bowtie比对
+            nucleotide_alignment_file = nucleotide.alignment(args.input,
+                                                             nucleotide_index_file)
 
             start_time = timestamp_message("nucleotide alignment", start_time)
 
             # TODO speed up 2
-            print("processing sam file.....")
-            # Determine which reads are unaligned and reduce aligned reads file
-            # Remove the alignment_file as we only need the reduced aligned reads file
-            [unaligned_reads_file_fasta, reduced_aligned_reads_file] = nucleotide.unaligned_reads(
+            # reads are unaligned and reduce aligned reads file Remove the alignment_file as we only need the reduced
+            # aligned reads file
+            [unaligned_reads_file_fasta, reduced_aligned_reads_file] = nucleotide.unaligned_reads_yu(
                 nucleotide_alignment_file, alignments, unaligned_reads_store, keep_sam=True)
 
             start_time = timestamp_message("nucleotide alignment post-processing", start_time)
@@ -1028,13 +1022,15 @@ def main():
         # Do not run if set to bypass translated search in config file
         if not config.bypass_translated_search:
             # Run translated search on UniRef database if unaligned reads exit
-            if unaligned_reads_store.count_reads() > 0:
+            if unaligned_reads_store.count_reads() >= 0:
+                # diamonds 比对
                 translated_alignment_file = translated.alignment(config.protein_database,
                                                                  unaligned_reads_file_fasta)
 
                 start_time = timestamp_message("translated alignment", start_time)
 
                 # Determine which reads are unaligned
+                # TODO speed up 4
                 translated_unaligned_reads_file_fastq = translated.unaligned_reads(
                     unaligned_reads_store, translated_alignment_file, alignments)
 
@@ -1151,8 +1147,7 @@ def main():
     print(message)
 
     # Remove the unnamed temp files
-    # 暂时保留diamond
-    # utilities.remove_directory(config.unnamed_temp_dir)
+    utilities.remove_directory(config.unnamed_temp_dir)
 
     # Remove named temp directory
     if args.remove_temp_output:

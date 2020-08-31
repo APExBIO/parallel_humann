@@ -369,9 +369,7 @@ def unaligned_reads_yu(sam_alignment_file, alignments, unaligned_reads_store, ke
 
     utilities.file_exists_readable(sam_alignment_file)
 
-    import time
     from multiprocessing import Pool
-    start = time.time()
     chunk_size = 1000000 * config.threads
     with open(sam_alignment_file, "rt") as file_handle_read, \
             open(reduced_aligned_reads_file, "w") as file_handle_write_aligned, \
@@ -382,9 +380,6 @@ def unaligned_reads_yu(sam_alignment_file, alignments, unaligned_reads_store, ke
             file_handle_write_aligned.writelines(filter(None, aligned_info))
             lines = file_handle_read.readlines(chunk_size)
 
-    print("p1", time.time() - start)
-    start = time.time()
-
     # process alignments to determine genes for filtering
     # allowed_genes作为全局变量，在子进程中需要使用
     global allowed_genes
@@ -394,9 +389,6 @@ def unaligned_reads_yu(sam_alignment_file, alignments, unaligned_reads_store, ke
                                                     nucleotide=True,
                                                     query_coverage_threshold=config.nucleotide_query_coverage_threshold,
                                                     identity_threshold=config.nucleotide_identity_threshold)
-    print(id(allowed_genes))
-    print("p2", time.time() - start)
-    start = time.time()
 
     query_ids = set()
     no_frames_found_count = 0
@@ -426,7 +418,6 @@ def unaligned_reads_yu(sam_alignment_file, alignments, unaligned_reads_store, ke
             query_coverage_count += sum([r['query_coverage_count'] for r in results])
 
 
-    print("p3", time.time() - start)
     if write_picked_frames:
         logger.debug("Total sequences without frames found: " + str(no_frames_found_count))
     logger.debug("Total nucleotide alignments not included based on filtered genes: " +
