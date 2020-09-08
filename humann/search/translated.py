@@ -204,7 +204,6 @@ def diamond_alignment(alignment_file, uniref, unaligned_reads_file_fasta):
 
                 full_args += ["--out", temp_out_file, "--tmpdir", os.path.dirname(temp_out_file)]
                 utilities.execute_command(exe, full_args, [input_database], [])
-        # TODO 搞懂merge
         # merge the temp output files
         # 只有一个输出文件，直接mv
         if len(temp_out_files) == 1:
