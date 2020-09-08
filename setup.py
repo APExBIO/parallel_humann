@@ -539,7 +539,6 @@ class Install(_install):
         _install.finalize_options(self)
     
     def run(self):
-        print("XXXX")
         # install minpath if not already installed
         # install_minpath(replace_install=self.replace_dependencies_install)
         
