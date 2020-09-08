@@ -16,8 +16,8 @@
 
 
 ## TODO ##
--[x] 继续优化Diamond Output post-processing  
--[x] 在更多数据集上测试结果一致性
+- [x] 继续优化Diamond Output post-processing  
+- [x] 在更多数据集上测试结果一致性
 
 ## HUMAnN Src ##
 

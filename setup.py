@@ -68,7 +68,7 @@ import tempfile
 import re
 import time
 
-VERSION = "3.0.0.alpha.4"
+VERSION = "3.0.0.alpha.4-parallel_humann"
 AUTHOR = "HUMAnN Development Team"
 AUTHOR_EMAIL = "humann-users@googlegroups.com"
 MAINTAINER = "Lauren McIver"
@@ -539,9 +539,9 @@ class Install(_install):
         _install.finalize_options(self)
     
     def run(self):
-        
+        print("XXXX")
         # install minpath if not already installed
-        install_minpath(replace_install=self.replace_dependencies_install)
+        # install_minpath(replace_install=self.replace_dependencies_install)
         
         _install.run(self)
         
@@ -624,12 +624,12 @@ setuptools.setup(
     package_data={
         'humann' : [
             'humann.cfg',
-            'data/pathways/*',
-            'data/misc/*',
-            'data/uniref_DEMO/*',
-            'data/chocophlan_DEMO/*',
-            'tests/data/*.*',
-            'tests/data/tooltest*/*',
+            # 'data/pathways/*',
+            # 'data/misc/*',
+            # 'data/uniref_DEMO/*',
+            # 'data/chocophlan_DEMO/*',
+            # 'tests/data/*.*',
+            # 'tests/data/tooltest*/*',
             'quantify/MinPath/data/*',
             'quantify/MinPath/glpk-*/examples/glp*',
             'quantify/MinPath/glpk-*/examples/.libs/*'
@@ -638,27 +638,27 @@ setuptools.setup(
         'console_scripts': [
             'humann = humann.humann:main',
             'humann3 = humann.humann:main',
-            'humann_databases = humann.tools.humann_databases:main',
-            'humann3_databases = humann.tools.humann_databases:main',
-            'humann_config = humann.tools.humann_config:main',
-            'humann_join_tables = humann.tools.join_tables:main',
-            'humann_split_table = humann.tools.split_table:main',
-            'humann_rename_table = humann.tools.rename_table:main',
-            'humann_renorm_table = humann.tools.renorm_table:main',
-            'humann_regroup_table = humann.tools.regroup_table:main',
-            'humann_infer_taxonomy = humann.tools.infer_taxonomy:main',
-            'humann_humann1_kegg = humann.tools.humann_humann1_kegg:main',
-            'humann_rna_dna_norm = humann.tools.rna_dna_norm:main',
-            'humann_strain_profiler = humann.tools.strain_profiler:main',
-            'humann_reduce_table = humann.tools.reduce_table:main',
-            'humann_unpack_pathways = humann.tools.merge_abundance:main',
-            'humann_test = humann.tests.humann_test:main',
-            'humann_build_custom_database = humann.tools.build_custom_database:main',
-            'humann_genefamilies_genus_level = humann.tools.genefamilies_genus_level:main',
-            'humann_split_stratified_table = humann.tools.split_stratified_table:main',
-            'humann_associate = humann.tools.humann_associate:main',
-            'humann_barplot = humann.tools.humann_barplot:main',
-            'humann_benchmark = humann.tools.humann_benchmark:main'
+            # 'humann_databases = humann.tools.humann_databases:main',
+            # 'humann3_databases = humann.tools.humann_databases:main',
+            # 'humann_config = humann.tools.humann_config:main',
+            # 'humann_join_tables = humann.tools.join_tables:main',
+            # 'humann_split_table = humann.tools.split_table:main',
+            # 'humann_rename_table = humann.tools.rename_table:main',
+            # 'humann_renorm_table = humann.tools.renorm_table:main',
+            # 'humann_regroup_table = humann.tools.regroup_table:main',
+            # 'humann_infer_taxonomy = humann.tools.infer_taxonomy:main',
+            # 'humann_humann1_kegg = humann.tools.humann_humann1_kegg:main',
+            # 'humann_rna_dna_norm = humann.tools.rna_dna_norm:main',
+            # 'humann_strain_profiler = humann.tools.strain_profiler:main',
+            # 'humann_reduce_table = humann.tools.reduce_table:main',
+            # 'humann_unpack_pathways = humann.tools.merge_abundance:main',
+            # 'humann_test = humann.tests.humann_test:main',
+            # 'humann_build_custom_database = humann.tools.build_custom_database:main',
+            # 'humann_genefamilies_genus_level = humann.tools.genefamilies_genus_level:main',
+            # 'humann_split_stratified_table = humann.tools.split_stratified_table:main',
+            # 'humann_associate = humann.tools.humann_associate:main',
+            # 'humann_barplot = humann.tools.humann_barplot:main',
+            # 'humann_benchmark = humann.tools.humann_benchmark:main'
         ]},
     test_suite= 'humann.tests.humann_test.unittests_suite_only',
     zip_safe = False
