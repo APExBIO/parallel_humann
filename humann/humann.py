@@ -65,7 +65,7 @@ from .quantify import modules
 # name global logging instance
 logger = logging.getLogger(__name__)
 
-VERSION = "3.0.0.alpha.4-parallel"
+VERSION = "3.0.0.alpha.4-parallel_humann_1.0"
 MAX_SIZE_DEMO_INPUT_FILE = 10
 
 
@@ -984,10 +984,9 @@ def main():
             # Bowtie比对
             nucleotide_alignment_file = nucleotide.alignment(args.input,
                                                              nucleotide_index_file)
-
             start_time = timestamp_message("nucleotide alignment", start_time)
 
-            # TODO speed up 2
+            # speed up 2
             # reads are unaligned and reduce aligned reads file Remove the alignment_file as we only need the reduced
             # aligned reads file
             [unaligned_reads_file_fasta, reduced_aligned_reads_file] = nucleotide.unaligned_reads_yu(
@@ -1030,7 +1029,7 @@ def main():
                 start_time = timestamp_message("translated alignment", start_time)
 
                 # Determine which reads are unaligned
-                # TODO speed up 4
+                # speed up 4
                 translated_unaligned_reads_file_fastq = translated.unaligned_reads(
                     unaligned_reads_store, translated_alignment_file, alignments)
 
