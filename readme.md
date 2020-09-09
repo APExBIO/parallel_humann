@@ -1,4 +1,4 @@
-# Parallel HuMAnN v1.0 #
+# Parallel HuMAnN v1.1 #
 - Update HuMAnN3.0 with parallel computing
 - Speed up to 2x-4x times
 - compatible with HuMAnN 3.0 
