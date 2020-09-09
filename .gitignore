@@ -2,3 +2,7 @@ humann/data
 humann/tests
 humann.egg-info
 build
+parallel_humann/data
+parallel_humann/tests
+parallel_humann/tools
+parallel_humann/quantify
