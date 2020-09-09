@@ -181,7 +181,6 @@ def diamond_alignment(alignment_file, uniref, unaligned_reads_file_fasta):
     message = "Running " + exe + " ........"
     logger.info(message)
     print("\n" + message + "\n")
-
     if not bypass:
         args += opts
         temp_out_files = []
